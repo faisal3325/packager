@@ -14,7 +14,7 @@ def main(file_path):
     prepareLayers(files)
 
     # prepare functions
-    # prepareFunctions(files)
+    prepareFunctions(files)
 
 
 def prepareLayers(files):
@@ -28,7 +28,6 @@ def prepareLayers(files):
     # get all modules
     modules = list(
         filter(lambda file: file.startswith('ER_'), os.listdir()))
-    print(modules)
 
     # process modules
     processFile(modules, target=conf.layer_path)
@@ -46,7 +45,6 @@ def prepareFunctions(files):
 
     # get all scripts
     scripts = os.listdir()
-    print(scripts)
 
     # process scripts
     processFile(scripts)
@@ -64,43 +62,46 @@ def filterFiles(file):
 def processFile(files, target=None):
     # loop through each file to process
     for file in files:
+        _target = target
         if target is None:
-            target = file
+            _target = file
         # move to file
         os.chdir(file)
 
-        recursivelyGetFiles(file, target)
+        recursivelyGetFiles(file, _target)
 
-        zip(target)
+        targetFolder = _target.split('/')[0]
+        zip(targetFolder)
 
-        toDelete = target.split('/')[0]
-        if os.path.exists(f'{toDelete}'):
-            shutil.rmtree(f'{toDelete}')
+        if os.path.exists(f'{targetFolder}'):
+            shutil.rmtree(f'{targetFolder}')
 
         os.chdir("..")
 
 
-def recursivelyGetFiles(path, target):
+def recursivelyGetFiles(path, target, recur=0):
     # get files in path
-    print(path, target)
-    print(os.listdir())
     files = list(filter(lambda file: filterFiles(file), os.listdir()))
-    print(files)
     # loop through all and check wether file is dir
     for file in files:
         if isDir(file):
             os.chdir(file)
-            recursivelyGetFiles(file, f"{target}/{file}")
+            recursivelyGetFiles(file, f"{target}/{file}", recur + 1)
             os.chdir("..")
         else:
-            copyFile(file, path, target)
+            copyFile(file, path, target, recur)
 
 
-def copyFile(file, path, target):
+def copyFile(file, path, target, recur):
     # create target path
-    if not os.path.exists(target):
-        os.makedirs(target)
-    shutil.copyfile(file, f"{target}/{file}")
+    backtrack = ''
+    if recur > 0:
+        for i in range(0, recur):
+            backtrack = f"{backtrack}../"
+
+    if not os.path.exists(f"{backtrack}{target}"):
+        os.makedirs(f"{backtrack}{target}")
+    shutil.copyfile(file, f"{backtrack}{target}/{file}")
 
 
 def isDir(source):
@@ -113,8 +114,8 @@ def isDir(source):
 
 
 def zip(target):
-    zipf = zipfile.ZipFile('python.zip', 'w', zipfile.ZIP_DEFLATED)
-    zipdir('python/', zipf)
+    zipf = zipfile.ZipFile(f'{target}.zip', 'w', zipfile.ZIP_DEFLATED)
+    zipdir(f'{target}/', zipf)
     zipf.close()
 
 
